@@ -268,6 +268,8 @@ proc RawDataFile { socketID fileName TRANS_ID bytes } {
 
         set callback [list GenerateXscript $outfile [lindex $transInfoArray($TRANS_ID) 0] [lindex $transInfoArray($TRANS_ID) 1] $TRANS_ID]
 
+    } elseif { $type == "bro" } {
+        set callback [list GenerateBroscript $outfile [lindex $transInfoArray($TRANS_ID) 0] [lindex $transInfoArray($TRANS_ID) 1] $TRANS_ID]
     } else { 
 
         set callback [list PcapAvailable $outfile $TRANS_ID]
@@ -287,6 +289,126 @@ proc XscriptDebugMsg { TRANS_ID msg } {
         catch {SendSocket [lindex $transInfoArray($TRANS_ID) 0]\
            [list XscriptDebugMsg [lindex $transInfoArray($TRANS_ID) 1] $msg]}
     }
+}
+
+proc BroScriptRequest { socketID sensor sensorID winID timestamp srcIP srcPort dstIP dstPort proto force } {
+  global NEXT_TRANS_ID transInfoArray LOCAL_LOG_DIR TCPFLOW CANCEL_TRANS_FLAG BRO BRO_SCRIPT
+        puts "DEBUG: Entered BroScriptRequest()"
+  # If we don't have TCPFLOW then error to the user and return
+  if { ![info exists BRO] || ![file exists $BRO] || ![file executable $BRO] } {
+      catch {SendSocket $socketID [list ErrorMessage "ERROR: Bro is not installed on the server."]}
+      catch {SendSocket $socketID [list XscriptDebugMsg $winID "ERROR: Bro is not installed on the server."]}
+    return
+  }
+  # Increment the xscript counter. Gives us a unique way to track the xscript
+  incr NEXT_TRANS_ID
+  set TRANS_ID $NEXT_TRANS_ID
+  set CANCEL_TRANS_FLAG($winID) 0
+  set date [lindex $timestamp 0]
+  if [catch { InitRawFileArchive $date $sensor $srcIP $dstIP $srcPort $dstPort $proto }\
+      rawDataFileNameInfo] {
+    catch {SendSocket $socketID\
+     [list ErrorMessage "Please pass the following to your sguild administrator:\
+      Error from sguild while getting pcap: $rawDataFileNameInfo"]}
+    catch {SendSocket $socketID [list XscriptDebugMsg $winID\
+     "ErrorMessage Please pass the following to your sguild administrator:\
+     Error from sguild while getting pcap: $rawDataFileNameInfo"]}
+    catch {SendSocket $socketID [list XscriptMainMsg $winID DONE]}
+    return
+  }
+  set sensorDir [lindex $rawDataFileNameInfo 0]
+  set rawDataFileName [lindex $rawDataFileNameInfo 1]
+  # A list of info we'll need when we generate the actual xscript after the rawdata is returned.
+  set transInfoArray($TRANS_ID) [list $socketID $winID $sensorDir bro $sensor $timestamp ]
+  if { ! [file exists $sensorDir/$rawDataFileName] || $force } {
+    # No local archive (first request) or the user has requested we force a check for new data.
+    if { ![GetRawDataFromSensor $TRANS_ID $sensor $sensorID $timestamp $srcIP $srcPort $dstIP $dstPort $proto $rawDataFileName bro] } {
+      # This means the sensor_agent for this sensor isn't connected.
+      catch {SendSocket $socketID [list ErrorMessage "ERROR: Unable to request xscript at this time.\
+       The sensor $sensor is NOT connected."]}
+      catch {SendSocket $socketID [list XscriptDebugMsg $winID "ERROR: Unable to request xscript at this time.\
+       The sensor $sensor is NOT connected."]}
+      catch {SendSocket $socketID [list XscriptMainMsg $winID DONE]}
+    }
+  } else {
+    # The data is archive locally.
+    catch {SendSocket $socketID [list XscriptDebugMsg $winID "Using archived data: $sensorDir/$rawDataFileName"]}
+    GenerateBroscript $sensorDir/$rawDataFileName $socketID $winID $TRANS_ID
+  }
+}
+
+proc GenerateBroscript { fileName clientSocketID winName TRANS_ID } {
+  global transInfoArray TCPFLOW LOCAL_LOG_DIR P0F P0F_PATH CANCEL_TRANS_FLAG BRO BRO_SCRIPT
+  set NODATAFLAG 1
+  puts "DEBUG: GenerateBroScript() entered.."
+  puts "DEBUG: filename: $fileName"
+
+  # We don't have a really good way for make xscripts yet and are unable
+  # to figure out the true src. So we assume the low port was the server
+  # port. We can get that info from the file name.
+  # Filename example: 208.185.243.68:6667_67.11.255.148:3470-6.raw
+  regexp {^(.*):(.*)_(.*):(.*)-([0-9]+)\.raw$} [file tail $fileName] allMatch srcIP srcPort dstIP dstPort ipProto
+
+  set srcMask [BroFlowFormat $srcIP $srcPort $dstIP $dstPort]
+  set dstMask [BroFlowFormat $dstIP $dstPort $srcIP $srcPort]
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName HDR]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Sensor Name:\t[lindex $transInfoArray($TRANS_ID) 4]"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Timestamp:\t[lindex $transInfoArray($TRANS_ID) 5]"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Connection ID:\t$winName"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Src IP:\t\t$srcIP\t([GetHostbyAddr $srcIP])"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Dst IP:\t\t$dstIP\t([GetHostbyAddr $dstIP])"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Src Port:\t\t$srcPort"]}
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "Dst Port:\t\t$dstPort"]}
+  if {$P0F} {
+    if { ![file exists $P0F_PATH] || ![file executable $P0F_PATH] } {
+      catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "Cannot find p0f in: $P0F_PATH"]}
+      catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "OS fingerprint has been disabled"]}
+    } else {
+      set p0fID [open "| $P0F_PATH -q -s $fileName"]
+      while { [gets $p0fID data] >= 0 } {
+        catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "OS Fingerprint:\t$data"]}
+      }
+      catch {close $p0fID} closeError
+    }
+  }
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName " "]}
+  if  [catch {open "| $BRO -r $fileName $BRO_SCRIPT"} broFlowID] {
+    LogMessage "ERROR: bro: $broFlowID"
+    catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "ERROR: bro: $broFlowID"]}
+    catch {close $broFlowID}
+    return
+  }
+  set state SRC
+  while { [gets $broFlowID data] >= 0 } {
+    set NODATAFLAG 0
+    if { [regsub ^$srcMask:\  $data {} data] > 0 } {
+      set state SRC
+    } elseif { [regsub ^$dstMask:\  $data {} data] > 0 } {
+      set state DST
+    }
+    catch {SendSocket $clientSocketID [list XscriptMainMsg $winName $state]}
+    SendSocket $clientSocketID [list XscriptMainMsg $winName $data]
+    update
+    if { $CANCEL_TRANS_FLAG($winName) } { break }
+  }
+  if [catch {close $broFlowID} closeError] {
+    catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "ERROR: Bro: $closeError"]}
+  }
+  if {$NODATAFLAG} {
+    catch {SendSocket $clientSocketID [list XscriptMainMsg $winName "No Data Sent."]}
+  }
+  catch {SendSocket $clientSocketID [list XscriptMainMsg $winName DONE]}
+
+  unset transInfoArray($TRANS_ID)
+  unset CANCEL_TRANS_FLAG($winName)
+
+}
+
+proc BroFlowFormat { srcIP srcPort dstIP dstPort } {
+  set tmpSrcIP [split $srcIP .]
+  set tmpDstIP [split $dstIP .]
+  set tmpData [eval format "%i.%i.%i.%i.%i-%i.%i.%i.%i.%i" $tmpSrcIP $srcPort $tmpDstIP $dstPort]
+  return $tmpData
 }
 
 proc GenerateXscript { fileName clientSocketID winName TRANS_ID } {
@@ -381,6 +503,24 @@ proc QuickScript { clientSocketID alertID } {
     
         catch {SendSocket $clientSocketID [list XscriptMainMsg foo "Unable to find alert $alertID in RealTime array"]}
         catch {SendSocket $clientSocketID [list XscriptMainMsg foo DONE]}
+
+    }
+
+}
+
+proc CliScriptBro { clientSocketID eventInfo } {
+
+    if { [llength $eventInfo] == 7 } {
+
+        lassign $eventInfo \
+            sensor timestamp sensorID srcIP dstIP srcPort dstPort
+
+        BroScriptRequest $clientSocketID $sensor $sensorID CLI $timestamp $srcIP $srcPort $dstIP $dstPort 6 0
+
+    } else {
+
+        SendSocket $clientSocketID [list XscriptMainMsg CLI "Request Failed"]
+        SendSocket $clientSocketID [list XscriptMainMsg CLI DONE]
 
     }
 

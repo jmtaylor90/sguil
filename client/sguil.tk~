@@ -3059,11 +3059,8 @@ set eventIDMenut [ menu .eventIDMenut -background $SELECTBACKGROUND -foreground 
 $eventIDMenut add command -label "Event History" -command "GetEventHistory"
 $eventIDMenut add command -label "Transcript" -command "GetXscript xscript 0"
 $eventIDMenut add command -label "Transcript (force new)" -command "GetXscript xscript 1"
-$eventIDMenut add command -label "Bro" -command "GetBroscript broscript 0"
-$eventIDMenut add command -label "Bro (force new)" -command "GetBroscript broscript 1"
 $eventIDMenut add command -label "Wireshark" -command "GetXscript wireshark 0"
 $eventIDMenut add command -label "Wireshark (force new)" -command "GetXscript wireshark 1"
-
 
 # IPQuery Menu
 set ipQueryMenu [ menu .ipQueryMenu -background $SELECTBACKGROUND -foreground $SELECTFOREGROUND \

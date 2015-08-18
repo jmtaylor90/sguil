@@ -142,13 +142,20 @@ proc DisplayIncidentCats {} {
   set categoryButton [button $categoryTl.close -text "Ok" -command "destroy $categoryTl"]
   pack $categoryText -side top -fill both -expand true
   pack $categoryButton -side bottom
-  $categoryText component text insert end "Category I\tUnauthorized Root/Admin Access\n"
-  $categoryText component text insert end "Category II\tUnauthorized User Access\n"
-  $categoryText component text insert end "Category III\tAttempted Unauthorized Access\n"
-  $categoryText component text insert end "Category IV\tSuccessful Denial of Service Attack\n"
-  $categoryText component text insert end "Category V\tPoor Security Practice or Policy Violation\n"
-  $categoryText component text insert end "Category VI\tReconnaissance/Probes/Scans\n"
-  $categoryText component text insert end "Category VII\tVirus Infection\n"
+  global CAT1
+  global CAT2
+  global CAT3
+  global CAT4
+  global CAT5
+  global CAT6
+  global CAT7
+  $categoryText component text insert end $CAT1
+  $categoryText component text insert end $CAT2
+  $categoryText component text insert end $CAT3
+  $categoryText component text insert end $CAT4
+  $categoryText component text insert end $CAT5
+  $categoryText component text insert end $CAT6
+  $categoryText component text insert end $CAT7
 }
 
 proc ClearPacketData {} {

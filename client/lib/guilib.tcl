@@ -134,6 +134,9 @@ proc CreateTableListBox { winName columnList } {
 }
 
 proc DisplayIncidentCats {} {
+
+  global CAT
+
   set categoryTl [toplevel .categoryTl]
   wm title .categoryTl "Incident Categories"
   wm geometry .categoryTl +[winfo pointerx .]+[winfo pointery .]
@@ -142,6 +145,7 @@ proc DisplayIncidentCats {} {
   set categoryButton [button $categoryTl.close -text "Ok" -command "destroy $categoryTl"]
   pack $categoryText -side top -fill both -expand true
   pack $categoryButton -side bottom
+<<<<<<< HEAD
   global CAT1
   global CAT2
   global CAT3
@@ -156,6 +160,17 @@ proc DisplayIncidentCats {} {
   $categoryText component text insert end $CAT5
   $categoryText component text insert end $CAT6
   $categoryText component text insert end $CAT7
+=======
+
+  foreach v [lsort [array names CAT]] {
+
+    set d [lindex $CAT($v) 0]
+    set k [lindex $CAT($v) 3]
+    $categoryText component text insert end "${k}: $d\n"
+
+  }
+
+>>>>>>> bammv/master
 }
 
 proc ClearPacketData {} {

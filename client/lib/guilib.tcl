@@ -145,22 +145,6 @@ proc DisplayIncidentCats {} {
   set categoryButton [button $categoryTl.close -text "Ok" -command "destroy $categoryTl"]
   pack $categoryText -side top -fill both -expand true
   pack $categoryButton -side bottom
-<<<<<<< HEAD
-  global CAT1
-  global CAT2
-  global CAT3
-  global CAT4
-  global CAT5
-  global CAT6
-  global CAT7
-  $categoryText component text insert end $CAT1
-  $categoryText component text insert end $CAT2
-  $categoryText component text insert end $CAT3
-  $categoryText component text insert end $CAT4
-  $categoryText component text insert end $CAT5
-  $categoryText component text insert end $CAT6
-  $categoryText component text insert end $CAT7
-=======
 
   foreach v [lsort [array names CAT]] {
 
@@ -170,7 +154,6 @@ proc DisplayIncidentCats {} {
 
   }
 
->>>>>>> bammv/master
 }
 
 proc ClearPacketData {} {

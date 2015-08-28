@@ -3061,7 +3061,6 @@ $eventIDMenut add command -label "Bro (force new)" -command "GetBroscript broscr
 $eventIDMenut add command -label "Wireshark" -command "GetXscript wireshark 0"
 $eventIDMenut add command -label "Wireshark (force new)" -command "GetXscript wireshark 1"
 
-
 # IPQuery Menu
 set ipQueryMenu [ menu .ipQueryMenu -background $SELECTBACKGROUND -foreground $SELECTFOREGROUND \
   -activeforeground $SELECTBACKGROUND -activebackground $SELECTFOREGROUND -tearoff 0 ]

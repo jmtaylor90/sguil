@@ -1,6 +1,4 @@
-#!/bin/sh
-# Run tcl from users PATH \
-exec tclsh "$0" "$@"
+#!/usr/bin/env tclsh
 
 # $Id: snort_agent.tcl,v 1.9 2011/02/17 02:55:48 bamm Exp $ #
 
@@ -44,121 +42,6 @@ proc bgerror { errorMsg } {
 
     }
                                                                                                                            
-}
-
-proc InitSnortStats {} {
-
-    global SNORT_PERF_FILE
-
-    # Check for var and correct file foo.
-    if { ![info exists SNORT_PERF_FILE] } {
-
-        set errMsg "Error: No infile provided for snort stats."
-        SendToSguild [list SystemMessage $errMsg]
-        return
-
-    } elseif { ![file exists $SNORT_PERF_FILE] } {
-
-        set errMsg "Error: Unable to monitor snort stats. File $SNORT_PERF_FILE does not exist."
-        SendToSguild [list SystemMessage $errMsg]
-        after 30000 InitSnortStats
-        return
-
-    } elseif { ![file readable $SNORT_PERF_FILE] } {
-
-        set errMsg "Error: File $SNORT_PERF_FILE is not readable by snort_agent.tcl."
-        SendToSguild [list SystemMessage $errMsg]
-        after 30000 InitSnortStats
-        return
-
-    }
-
-    # Open stats file with tail.
-    if { [catch {open "| tail -n 1 -f $SNORT_PERF_FILE" r} statsFileID] } {
-
-        set errMsg "Error opening $SNORT_PERF_FILE: $statsFileID"
-        SendToSguild [list SystemMessage $errMsg]
-        after 30000 InitSnortStats
-        return
-
-    }
-
-    fconfigure $statsFileID -buffering line
-    fileevent $statsFileID readable [list ReadSnortStats $statsFileID]
- 
-}
-
-proc ReadSnortStats { statsFileID } {
-
-    global SNORT_PERF_FILE
-
-    if { [eof $statsFileID] || [catch {gets $statsFileID data} tmpError] } {
-
-        catch {close $statsFileID} tmpError
-        if { [info exists tmpError] } {
-            set errMsg "Error while processing $SNORT_PERF_FILE: $tmpError"
-        } else {
-            set errMsg "Error: Received EOF from $SNORT_PERF_FILE"
-        }
-        SendToSguild [list SystemMessage $errMsg]
-        SendToSguild [list SystemMessage "Trying to reread file in 30 secs."]
-        after 30000 InitSnortStats
-        return
-
-    } else {
-
-        ProcessSnortStats $data
-
-    }
-
-}
-
-proc ProcessSnortStats { data } {
-
-    global snortStatsList DEBUG
-
-    set dataList [split $data ,]
-
-    if { ![string is integer [lindex $dataList 0]] } {
-        if {$DEBUG} { puts "Error: Invalid snort stats line: $data" }
-        return
-    }
-    set snortStatsList ""
-    foreach i [list 1 2 3 4 5 6 9 10 11] {
-        lappend snortStatsList [lindex $dataList $i]
-    }
-    lappend snortStatsList [clock format [lindex $dataList 0] -gmt true -f "%Y-%m-%d %T"]
-
-    # Save me
-    #set snortStats(time) [clock format [lindex $dataList 0] -gmt true -f "%Y-%m-%d %T"]
-    #set snortStats(drop) [lindex $dataList 1]
-    #set snortStats(wireMb) [lindex $dataList 2]
-    #set snortStats(alerts_per_sec) [lindex $dataList 3]
-    #set snortStats(pkts_per_sec) [lindex $dataList 4]
-    #set snortStats(bytes_per_sec) [lindex $dataList 5]
-    #set snortStats(patmatch) [lindex $dataList 6]
-    #set snortStats(new_ssns) [lindex $dataList 9]
-    #set snortStats(total_ssns) [lindex $dataList 10]
-    #set snortStats(max_ssns) [lindex $dataList 11]
-
-    SendStats
-
-}
-
-proc SendStats {} {
-
-    global snortStatsList SENSOR_ID 
-
-    if { ![info exists SENSOR_ID] } { after 10000 SendStats; return }
-
-    if { [info exists snortStatsList] } {
-        set tmpList [linsert $snortStatsList 0 $SENSOR_ID]
-    } else {
-        return
-    }
-
-    SendToSguild [list SnortStats $tmpList]
-
 }
 
 proc InitBYSocket { port } {
@@ -300,96 +183,6 @@ proc SendBYFailMsg { socketID cid msg} {
     SendToBarnyard $socketID "Failed to insert $cid: $msg"
 
 }
-
-proc CheckForPortscanFiles {} {
-
-    global PORTSCAN_DIR PS_CHECK_DELAY_IN_MSECS DEBUG CONNECTED
-    global PORTSCANFILEWAIT HOSTNAME
-
-
-    if {$CONNECTED} {
-
-        if {$DEBUG} {puts "Checking for PS files in $PORTSCAN_DIR."}
-
-        foreach fileName [glob -nocomplain $PORTSCAN_DIR/portscan_log.*] {
-
-            if { [file exists $fileName] && [file size $fileName] > 0 } {
-
-                if { $CONNECTED } {
-
-                    set PORTSCANFILEWAIT $fileName
-                    SendToSguild [list PSFile $HOSTNAME [file tail $fileName] [file size $fileName]]
-                    
-                    # Binary copy here
-                    if { [BinCopyToSguild $fileName] } {
-
-                        # Wait 5 secs and make sure the file was confirmed
-                        after 5000 CheckPortscanConfirmation $fileName
-                        vwait PORTSCANFILEWAIT
-
-                    } else {
-
-                        if {$DEBUG} { puts "Error copying $fileName to sguild."}
-
-                    }
-
-
-                } else {
-
-                    # Lost our cnx
-                    break
-
-                }
-
-            } else {
-
-                catch {file delete $fileName}
-
-            }
-
-            # Break out if we lost our connection.
-            if { !$CONNECTED } { break }
-
-        }
-
-    }
-
-    after $PS_CHECK_DELAY_IN_MSECS CheckForPortscanFiles
-
-}
-
-proc CheckPortscanConfirmation { fileName } {
-
-    global PORTSCANFILEWAIT DEBUG
-
-     if { $PORTSCANFILEWAIT == $fileName } {
-
-         # Something got held up. Release the vwait
-         if { $DEBUG } { puts "No confirmation on $fileName" }
-         set PORTSCANFILEWAIT 0
-
-     }
-
-}
-
-proc ConfirmPortscanFile { fileName } {
-
-    global DEBUG PORTSCAN_DIR PORTSCANFILEWAIT
-
-    if { [file exists $PORTSCAN_DIR/$fileName] } {
-
-        if [catch [file delete $PORTSCAN_DIR/$fileName] tmpError] {
-
-            puts "ERROR: Deleting  $PORTSCAN_DIR/$fileName: $tmpError"
-
-        }
- 
-    }
-
-    set PORTSCANFILEWAIT 0
-
-}
-
 
 proc BinCopyToSguild { fileName } {
 
@@ -766,7 +559,5 @@ if { [catch {package require tls} tmpError] }  {
 
 ConnectToSguilServer
 InitBYSocket $BY_PORT
-if { [info exists PORTSCAN] && $PORTSCAN } { CheckForPortscanFiles }
-if { [info exists SNORT_PERF_STATS] && $SNORT_PERF_STATS } { InitSnortStats }
 if {$PING_DELAY != 0} { PingServer }
 vwait FOREVER

@@ -1,6 +1,4 @@
-#!/bin/sh
-# Run tcl from users PATH \
-exec tclsh "$0" "$@"
+#!/usr/bin/env tclsh
 
 # $Id: pcap_agent.tcl,v 1.13 2011/03/10 22:03:33 bamm Exp $ #
 
@@ -427,7 +425,7 @@ proc MergePcapFiles { rawDataFileName TRANS_ID type } {
         # Strip the 24 byte pcap header from all but the first file and append them to the main
         foreach pcapFile [lrange $PCAP_FILE_TRACKER($rawDataFileName) 1 end] {
 
-            if { [file size $pcapFile] > 24 } { 
+            if { [file exists $pcapFile] && [file size $pcapFile] > 24 } { 
 
                 set pID [open $pcapFile r]
                 fconfigure $pID -translation binary
@@ -494,29 +492,6 @@ proc ProcessTcpdump { fileName TRANS_ID type } {
 
 
     }
-
-}
-
-proc CheckDiskSpace {} {
-
-    global DEBUG WATCH_DIR DISK_CHECK_DELAY_IN_MSECS CONNECTED
-
-    if { $CONNECTED && [info exists WATCH_DIR] && [file exists $WATCH_DIR] } {
-
-        if [catch {exec df -Ph $WATCH_DIR} output] {
-
-            SendToSguild "DiskReport Error: $output"
-
-        } else {
-
-            set diskUse [lindex [lindex [split $output \n] 1] 4]
-            SendToSguild "DiskReport $WATCH_DIR $diskUse"
-            after $DISK_CHECK_DELAY_IN_MSECS CheckDiskSpace
-
-        }
-
-    }
-
 }
 
 proc PingServer {} {
@@ -586,20 +561,20 @@ proc ConnectToSguilServer {} {
         fileevent $sguildSocketID readable [list SguildCmdRcvd $sguildSocketID]
         set CONNECTED 1
         if {$DEBUG} {puts "Connected to $SERVER_HOST"}
-        InitSnortAgent
+        InitPcapAgent
 
     }
 
 }
 
-proc InitSnortAgent {} {
+proc InitPcapAgent {} {
 
     global CONNECTED DEBUG HOSTNAME NET_GROUP
 
     if {!$CONNECTED} {
 
        if {$DEBUG} { puts "Not connected to sguild. Sleeping 15 secs." }
-       after 15000 InitSnortAgent
+       after 15000 InitPcapAgent
 
     } else {
 
@@ -846,6 +821,5 @@ if { [catch {package require tls} tmpError] }  {
 
 ConnectToSguilServer
 if { [info exists FILE_CHECK_IN_MSECS] && $FILE_CHECK_IN_MSECS > 0 } { CheckLastPcapFile }
-if { [info exists DISK_CHECK_DELAY_IN_MSECS] && $DISK_CHECK_DELAY_IN_MSECS > 0 } { CheckDiskSpace }
 if {$PING_DELAY != 0} { PingServer }
 vwait FOREVER

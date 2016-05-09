@@ -25,7 +25,7 @@ proc EventRcvd { eventDataList } {
     if { ![array exists acRules] || ![AutoCat $eventDataList] } {
       # Correlation/aggregation checks here: CorrelateEvent SrcIP Message
       set sensorID [lindex $eventDataList 5]
-      set matchAID [ CorrelateEvent $sensorID [lindex $eventDataList 8] [lindex $eventDataList 7] [lindex $eventDataList 16] [lindex $eventDataList 17]]
+      set matchAID [ CorrelateEvent $sensorID [lindex $eventDataList 8] [lindex $eventDataList 9] [lindex $eventDataList 7] [lindex $eventDataList 16] [lindex $eventDataList 17]]
       if { $matchAID == 0 } {
         AddEventToEventArray $eventDataList
         # Append the count of 1
@@ -277,7 +277,7 @@ proc DeleteEventID { socketID eventID status } {
   UpdateDBStatus $eventID [GetCurrentTimeStamp] $userIDArray($socketID) $status
 }
 
-proc CorrelateEvent { sid srcip msg {event_id {NULL}} {event_ref {NULL}} } {
+proc CorrelateEvent { sid srcip dstip msg {event_id {NULL}} {event_ref {NULL}} } {
     global eventIDArray eventIDList eventIDCountArray SENSOR_AGGREGATION_ON correlatedEventIDArray
     set MATCH 0
     
@@ -292,7 +292,7 @@ proc CorrelateEvent { sid srcip msg {event_id {NULL}} {event_ref {NULL}} } {
     
     foreach rteid $tmpList {
 	# This checks to see if we have a matching srcip and alert message.  Skip Open Port Messages, we deal with them below.
-	if { [lindex $eventIDArray($rteid) 8] == $srcip && [lindex $eventIDArray($rteid) 7] == $msg && $msg != "portscan: Open Port" }  {
+	if { [lindex $eventIDArray($rteid) 8] == $srcip && [lindex $eventIDArray($rteid) 9] == $dstip && [lindex $eventIDArray($rteid) 7] == $msg && $msg != "portscan: Open Port" }  {
 	    # Have a match
 	    set MATCH $rteid
 	    break

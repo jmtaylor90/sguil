@@ -885,6 +885,68 @@ proc GetXscript { type force } {
 
 }
 
+proc GetBroscript { type force } {
+
+    global ACTIVE_EVENT SERVERHOST XSCRIPT_SERVER_PORT DEBUG CUR_SEL_PANE XSCRIPTDATARCVD
+    global socketWinName SESSION_STATE WIRESHARK_STORE_DIR WIRESHARK_PATH WIRESHARK_OPTIONS
+
+    if {!$ACTIVE_EVENT} {return}
+
+    set selectedIndex [$CUR_SEL_PANE(name) curselection]
+    set sidcidList [split [$CUR_SEL_PANE(name) getcells $selectedIndex,alertID] .]
+    set cnxID [lindex $sidcidList 1]
+    set sensorID [lindex $sidcidList 0]
+
+    if { $CUR_SEL_PANE(format) == "SSN" } {
+        set timestamp [$CUR_SEL_PANE(name) getcells $selectedIndex,starttime]
+    } else {
+        set timestamp [$CUR_SEL_PANE(name) getcells $selectedIndex,date]
+    }
+
+    set sensor [$CUR_SEL_PANE(name) getcells $selectedIndex,sensor]
+    set srcIP [$CUR_SEL_PANE(name) getcells $selectedIndex,srcip]
+    set srcPort [$CUR_SEL_PANE(name) getcells $selectedIndex,srcport]
+    set dstIP [$CUR_SEL_PANE(name) getcells $selectedIndex,dstip]
+    set dstPort [$CUR_SEL_PANE(name) getcells $selectedIndex,dstport]
+    set proto [$CUR_SEL_PANE(name) getcells $selectedIndex,ipproto]
+
+    if { $srcPort == "" || $dstPort == "" } {
+
+        tk_messageBox -type ok -icon warning -message\
+         "Transcripts can only be generated for traffic with src/dst ports."
+        return
+
+    }
+
+    set xscriptWinName ".[string tolower ${sensor}]_${cnxID}"
+    if { $type == "broscript"} {
+        if { ![winfo exists $xscriptWinName] } {
+            CreateXscriptWin $xscriptWinName
+        } else {
+            InfoMessage "This transcipt is already being displayed by you. Please close\
+             that window before you request a new one."
+            # Try and bring the window to the top in case it is hidden.
+            wm withdraw $xscriptWinName
+            wm deiconify $xscriptWinName
+            return
+        }
+
+        set SESSION_STATE($xscriptWinName) HDR
+        XscriptDebugMsg $xscriptWinName\
+            "Your request has been sent to the server.\nPlease be patient as this can take some time."
+        $xscriptWinName.sText configure -cursor watch
+        set XSCRIPTDATARCVD($xscriptWinName) 0
+
+        SendToSguild [list BroScriptRequest $sensor $sensorID $xscriptWinName $timestamp $srcIP $srcPort $dstIP $dstPort $proto $force]
+
+         if {$DEBUG} {
+            puts "Xscript Request sent: [list $sensor $sensorID $xscriptWinName $timestamp $srcIP $srcPort $dstIP $dstPort $force]"
+            puts "Xscript Request sent: [list $sensor $sensorID $xscriptWinName $timestamp $srcIP $srcPort $dstIP $dstPort $proto $force]"
+         }
+    }
+
+}
+
 proc CopyDone { socketID tmpFileID tmpFile bytes {error {}} } {
   global DEBUG WIRESHARK_PATH
   close $tmpFileID

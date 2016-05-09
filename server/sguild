@@ -362,6 +362,10 @@ if { ![info exists CONF_FILE] } {
   }
 }
 set i 0
+
+set BRO /opt/bro/bin/bro
+set BRO_SCRIPT /opt/bro/share/bro/sguild_bro/TCPUDPFlow.bro
+
 if { [info exists CONF_FILE] } {
   # Parse the config file. Currently the only option is to 
   # create a variable using 'set varName value' 
@@ -770,7 +774,7 @@ if { $mergeTableListArray(event) != "" } {
 
         if { ![array exists acRules] || ![AutoCat $row] } {
 
-            set matchAID [CorrelateEvent [lindex $row 5] [lindex $row 8] [lindex $row 7] [lindex $row 15] [lindex $row 16]]
+            set matchAID [CorrelateEvent [lindex $row 5] [lindex $row 8] [lindex $row 9] [lindex $row 7] [lindex $row 15] [lindex $row 16]]
 
             if { $matchAID == 0 } {
 

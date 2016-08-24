@@ -134,11 +134,11 @@ set LOGGER {}
 # Check to see if tcl was compiled w/threading enabled.
 # Fork and thread don't play nice together so we bail 
 # w/an error if threading was enabled
-if { [info exists ::tcl_platform(threaded)] } {
-    puts "ERROR: This version of tcl was compile with threading enabled.\
-          Sguil is NOT compatible with threading."
-    CleanExit 1
-}
+#if { [info exists ::tcl_platform(threaded)] } {
+#    puts "ERROR: This version of tcl was compile with threading enabled.\
+#          Sguil is NOT compatible with threading."
+#    CleanExit 1
+#}
 
 # Check for the existance of logger 
 foreach path [split $env(PATH) :] {
@@ -673,22 +673,22 @@ foreach agentSidType $agentList {
     set hostname [lindex $agentSidType 2]
     set agent_type [lindex $agentSidType 3]
 
+    set qType "N/A"
+    set last "N/A"
     # Get the time of the last alert or load 
     # If the type is not pads or sancp then we assume it is 
     # an alert of some type and should be in the event table
     if { $agent_type != "pads" && $agent_type != "sancp" } {
+	
 
         # Make sure the event table has built
         if { $mergeTableListArray(event) != "" } {
-
-            set tmpQuery "SELECT MAX(timestamp) FROM event WHERE sid=$sid"
-
-        } else { 
-
-            set tmpQuery "N/A"
-
-        }
-
+		
+            	#set tmpQuery "SELECT MAX(timestamp) FROM event_$hostname_$td" 
+		#set tmpQuery "SELECT MAX(timestamp) FROM event WHERE sid=$sid"
+		set qType "event"
+	} 
+	
         if { $agent_type == "snort" } {
 
             # Init snort stats array
@@ -698,38 +698,41 @@ foreach agentSidType $agentList {
 
     } elseif { $agent_type == "pads" } {
 
-        set tmpQuery "SELECT MAX(timestamp) FROM pads WHERE sid=$sid"
+        #set tmpQuery "SELECT MAX(timestamp) FROM pads WHERE sid=$sid"
+	set qType "pads"
 
-    } elseif { $agent_type == "sancp" } {
+    } 
 
-        if { $mergeTableListArray(sancp) != "" } {
+    if { $qType == "N/A" } {
 
-            set tmpQuery "N/A"
-            #set tmpQuery "SELECT MAX(start_time) FROM sancp WHERE sid=$sid"
-
-        } else {
-
-            set tmpQuery "N/A"
-
-        }
+        set last "N/A"
 
     } else {
-
-        set tmpQuery "N/A"
-
+	#try query in today's table otherwise use the merge table
+	if { $qType != "pads" } {
+		set systemTime [clock seconds]
+		set dateTry [clock format $systemTime -format %Y%m%d]
+		set tableTry [format {%s_%s_%s} $qType $hostname $dateTry]
+        	set tmpQuery "SELECT MAX(timestamp) FROM `$tableTry`"
+		set checkForTable "SHOW TABLES LIKE '`$tableTry`'"
+		set tResult [MysqlSelect $checkForTable flatlist]
+		if {[format {%s} $tResult] ne ""} {
+			if [catch {set qResult [MysqlSelect $tmpQuery flatlist]} em] {
+				LogMessage "Current Day Event Table Not Found:  $em"
+				set tmpQuery "SELECT MAX(timestamp) FROM event WHERE sid=$sid"
+				set qResult [MysqlSelect $tmpQuery flatlist]
+			}
+			LogMessage "$tmpQuery $qResult"
+                	set last [lindex $qResult 0]
+			LogMessage "Last: $last"
+		}
+	} else {
+		set tmpQuery "SELECT MAX(timestamp) FROM pads WHERE sid=$sid"
+		LogMessage "$tmpQuery"
+        	set last [lindex [MysqlSelect $tmpQuery flatlist] 0]
+	}
+	
     }
-
-    if { $tmpQuery == "N/A" } {
-
-        set last $tmpQuery
-
-    } else {
-
-        LogMessage "  $tmpQuery"
-        set last [lindex [MysqlSelect $tmpQuery flatlist] 0]
-
-    }
-
     # agentStatusList(sid) net_name hostname agent_type last status
     set agentStatusList($sid) [list $net_name $hostname $agent_type $last 0]
 
@@ -774,7 +777,7 @@ if { $mergeTableListArray(event) != "" } {
 
         if { ![array exists acRules] || ![AutoCat $row] } {
 
-            set matchAID [CorrelateEvent [lindex $row 5] [lindex $row 8] [lindex $row 9] [lindex $row 7] [lindex $row 15] [lindex $row 16]]
+            set matchAID [CorrelateEvent [lindex $row 5] [lindex $row 8] [lindex $row 7] [lindex $row 15] [lindex $row 16]]
 
             if { $matchAID == 0 } {
 

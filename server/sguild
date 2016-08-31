@@ -17,8 +17,10 @@ exec tclsh "$0" "$@"
 
 set VERSION "SGUIL-0.9.0"
 set AGENT_VERSION "SGUIL-0.9.0"
+
 # DB Version
 set DB_VERSION "0.14"
+
 # Counter for tracking xscript transactions
 set NEXT_TRANS_ID 0
 
@@ -131,43 +133,39 @@ set validSensorSockets {}
 set clientList {}
 set LOGGER {}
 
-# Check to see if tcl was compiled w/threading enabled.
-# Fork and thread don't play nice together so we bail 
-# w/an error if threading was enabled
-#if { [info exists ::tcl_platform(threaded)] } {
-#    puts "ERROR: This version of tcl was compile with threading enabled.\
-#          Sguil is NOT compatible with threading."
-#    CleanExit 1
-#}
-
 # Check for the existance of logger 
 foreach path [split $env(PATH) :] {
     if { [file exists $path/logger] && [file executable $path/logger] } { set LOGGER $path/logger }
 }
+
 # Load mysql support.
 if [catch {package require mysqltcl} mysqltclVersion] {
-  puts "ERROR: The mysqltcl extension does NOT appear to be installed on this sysem."
+  puts "ERROR: The mysqltcl extension does NOT appear to be installed on this system."
   puts "Download it at http://www.xdobry.de/mysqltcl/"
   CleanExit 1
 }
+
 # Load extended tcl
 if [catch {package require Tclx} tclxVersion] {
   puts "ERROR: The tclx extension does NOT appear to be installed on this sysem."
   puts "Extended tcl (tclx) is available as a port/package for most linux and BSD systems."
   CleanExit 1
 }
+
 # Load sha1 from tcllib
 if [catch {package require sha1} sha1Version] {
   puts "ERROR: The sha1 package does NOT appear to be installed on this sysem."
   puts "The sha1 package is part of the tcllib extension. A port/package is available for most linux and BSD systems."
   CleanExit 1
 }
+
 # Load base64 from tcllib
 if [catch {package require base64} base64Version] {
   puts "ERROR: The base64 package does NOT appear to be installed on this sysem."
   puts "The base64 package is part of the tcllib extension. A port/package is available for most linux and BSD systems."
   CleanExit 1
 }
+
 # reset the random
 random seed
 
@@ -314,10 +312,11 @@ if { [info exists TLS_PATH] } {
 }
 
 if { [catch {package require tls} tlsError] } {
-    puts "ERROR: The tcl tls package does NOT appear to be installed on this sysem."
+    puts "ERROR: The tcl tls package does NOT appear to be installed on this system."
     puts "Please see http://tls.sourceforge.net/ for more info."
     CleanExit 1
 }
+
 # Check for certs
 if {![info exists CERTS_PATH]} {
 
@@ -452,10 +451,12 @@ set sourceLibs {
 if { [info exists TMP_SGUILD_LIB_PATH] } {
   set SGUILD_LIB_PATH $TMP_SGUILD_LIB_PATH
 }
+
 if { ![info exists SGUILD_LIB_PATH] } {
   # set the lib path to local dir
   set SGUILD_LIB_PATH ./lib
 }
+
 if { ![file exists $SGUILD_LIB_PATH] } {
   # Specified lib path doesn't exist
   puts "ERROR: Cannot find libraries in $SGUILD_LIB_PATH"
@@ -475,16 +476,19 @@ if { [info exists ADDUSER] && $ADDUSER } {
   AddUser $userName
   CleanExit
 }
+
 # Called in to change a users passwd.
 if { [info exists CHANGEPASSWD] && $CHANGEPASSWD} {
   ChangeUserPW $userName
   CleanExit
 }
+
 # Called in to disable a user account
 if { [info exists DISABLEUSER] && $DISABLEUSER} {
   DisableUser $userName
   CleanExit
 }
+
 # Load accessfile
 if { ![info exists ACCESS_FILE] } {
   # Check the defaults
@@ -501,18 +505,7 @@ if { ![info exists ACCESS_FILE] } {
 if { [file exists $ACCESS_FILE] } {
   LoadAccessFile $ACCESS_FILE
 }
-# Auto cat moved to the DB
-# Load auto cat config
-#if { ![info exists AUTOCAT_FILE] } {
-#   if { [file exists /etc/sguild/autocat.conf] } {
-#     set AUTOCAT_FILE "/etc/sguild/autocat.conf"
-#   } else {
-#     set AUTOCAT_FILE "./autocat.conf"
-#   }
-#}
-#if { [file exists $AUTOCAT_FILE] } {
-#  LoadAutoCatFile $AUTOCAT_FILE
-#}
+
 # Load email config file
 if { ![info exists EMAIL_FILE] } {
   if { [file exists /etc/sguild/sguild.email] } {
@@ -526,6 +519,7 @@ if { [file exists $EMAIL_FILE] } {
 } else {
   set EMAIL_EVENTS 0
 }
+
 # Load global queries.
 if { ![info exists GLOBAL_QRY_FILE] } {
   if { [file exists /etc/sguild/sguild.queries] } {
@@ -539,6 +533,7 @@ if { [file exists $GLOBAL_QRY_FILE] } {
 } else {
   set GLOBAL_QRY_LIST none
 }
+
 # Load report queries.
 if { ![info exists REPORT_QRY_FILE] } {
   if { [file exists /etc/sguild/sguild.reports] } {
@@ -554,7 +549,7 @@ if { [file exists $REPORT_QRY_FILE] } {
 }
 
 # Deamon
-if {[info exists DAEMON_CONF_OVERRIDE] && $DAEMON_CONF_OVERRIDE} { set DAEMON 1}
+if {[info exists DAEMON_CONF_OVERRIDE] && $DAEMON_CONF_OVERRIDE} { set DAEMON 1 } 
 if {$DAEMON} { Daemonize }
 
 # Check and initialize the DB
@@ -568,6 +563,7 @@ if [catch {eval mysqlconnect $connectCmd} MAIN_DB_SOCKETID] {
   LogMessage "ERROR: Unable to connect to $DBHOST on $DBPORT: Make sure mysql is running."
   ErrorMessage "$MAIN_DB_SOCKETID"
 }
+
 # DB Version
 set MYSQL_VERSION [FlatDBQuery "SHOW VARIABLES LIKE 'version'"]
 LogMessage "MySQL Version: $MYSQL_VERSION"
@@ -578,6 +574,7 @@ if { [catch {mysqluse $MAIN_DB_SOCKETID $DBNAME} noDBError] } {
   # Create the DB or die.
   if {![CreateDB $DBNAME]} { CleanExit }
 }
+
 # Make sure we have a compatible DB version
 set currentDBVer [FlatDBQuery "SELECT version FROM version"]
 LogMessage "SguilDB Version: $currentDBVer"
@@ -656,6 +653,7 @@ if { [info exists EMAIL_EVENTS] && $EMAIL_EVENTS } {
 
 # Set the AUTOID before we get events.
 set AUTOID [GetUserID auto]
+
 # Initialize some vars
 set eventIDList ""
 
@@ -678,14 +676,12 @@ foreach agentSidType $agentList {
     # Get the time of the last alert or load 
     # If the type is not pads or sancp then we assume it is 
     # an alert of some type and should be in the event table
-    if { $agent_type != "pads" && $agent_type != "sancp" } {
+    if { $agent_type != "pads" && $agent_type != "sancp" && $agent_type != "pcap" } {
 	
 
         # Make sure the event table has built
         if { $mergeTableListArray(event) != "" } {
 		
-            	#set tmpQuery "SELECT MAX(timestamp) FROM event_$hostname_$td" 
-		#set tmpQuery "SELECT MAX(timestamp) FROM event WHERE sid=$sid"
 		set qType "event"
 	} 
 	
@@ -698,7 +694,6 @@ foreach agentSidType $agentList {
 
     } elseif { $agent_type == "pads" } {
 
-        #set tmpQuery "SELECT MAX(timestamp) FROM pads WHERE sid=$sid"
 	set qType "pads"
 
     } 
@@ -708,7 +703,7 @@ foreach agentSidType $agentList {
         set last "N/A"
 
     } else {
-	#try query in today's table otherwise use the merge table
+	# Try query in today's table otherwise use the merge table
 	if { $qType != "pads" } {
 		set systemTime [clock seconds]
 		set dateTry [clock format $systemTime -format %Y%m%d]
@@ -844,6 +839,7 @@ if { $mergeTableListArray(event) != "" } {
 LogMessage "Retrieving DB info..." 
 LogMessage "  Getting a list of tables."
 set tableNameList [mysqlinfo $MAIN_DB_SOCKETID tables]
+
 # Clean up the PiMPDB tables
 regsub -all {event_\S+\s} $tableNameList {} tableNameList
 regsub -all {tcphdr_\S+\s} $tableNameList {} tableNameList
@@ -877,6 +873,7 @@ if { [info exists BIND_CLIENT_IP_ADDR] && $BIND_CLIENT_IP_ADDR != "" } {
 if [catch {eval $clientSocketCmd} serverSocket] {
   ErrorMessage "ERROR: Couldn't open client socket: $serverSocket"
 }
+
 # Open a socket for sensors to connect to
 if { [info exists BIND_SENSOR_IP_ADDR] && $BIND_SENSOR_IP_ADDR != "" } {
   set sensorSocketCmd "socket -server SensorConnect -myaddr $BIND_SENSOR_IP_ADDR $SENSORPORT"

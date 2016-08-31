@@ -18,8 +18,13 @@ proc RegisterAgent { socketID type sensorName netName } {
     # Data cnx stop here
     if { $type == "data" } { return }
 
+    # If pcap agent set maxcid -1
+    if { $type == "pcap" } {
+      set maxCid -1
+    }
+
     set sensorID [GetSensorID $sensorName $type $netName]
-    set maxCid [GetMaxCid $sensorID]
+    set maxCid [GetMaxCid $sensorID $sensorName]
 
     # Send agent id to the agent
     SendSensorAgent $socketID [list AgentInfo $sensorName $type $netName $sensorID $maxCid]
@@ -82,9 +87,9 @@ proc SendSensorAgent { socketID msg } {
     return $RFLAG
 }
 
-proc AgentLastCidReq { socketID req_socketID sid } {
+proc AgentLastCidReq { socketID req_socketID sid sensorName } {
 
-    set maxCid [GetMaxCid $sid]
+    set maxCid [GetMaxCid $sid $sensorName]
 
     SendSensorAgent $socketID [list LastCidResults $req_socketID $maxCid]
 

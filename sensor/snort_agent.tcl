@@ -156,10 +156,11 @@ proc BYEventRcvd { socketID eventInfo } {
 proc SidCidRequest { socketID } {
 
     global CONNECTED SENSOR_ID
+    global HOSTNAME
 
     if { $CONNECTED && [info exists SENSOR_ID] } {
 
-        SendToSguild [list AgentLastCidReq $socketID $SENSOR_ID]
+        SendToSguild [list AgentLastCidReq $socketID $socketID $SENSOR_ID $HOSTNAME]
 
     }
 }

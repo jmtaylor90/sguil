@@ -676,58 +676,13 @@ foreach agentSidType $agentList {
     # Get the time of the last alert or load 
     # If the type is not pads or sancp then we assume it is 
     # an alert of some type and should be in the event table
-    if { $agent_type != "pads" && $agent_type != "sancp" && $agent_type != "pcap" } {
-	
+    if { $agent_type == "snort" } {
+       
+       # Init snort stats array
+       set snortStatsArray($hostname) [list $sid N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A]
 
-        # Make sure the event table has built
-        if { $mergeTableListArray(event) != "" } {
-		
-		set qType "event"
-	} 
-	
-        if { $agent_type == "snort" } {
-
-            # Init snort stats array
-            set snortStatsArray($hostname) [list $sid N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A]
-
-        }
-
-    } elseif { $agent_type == "pads" } {
-
-	set qType "pads"
-
-    } 
-
-    if { $qType == "N/A" } {
-
-        set last "N/A"
-
-    } else {
-	# Try query in today's table otherwise use the merge table
-	if { $qType != "pads" } {
-		set systemTime [clock seconds]
-		set dateTry [clock format $systemTime -format %Y%m%d]
-		set tableTry [format {%s_%s_%s} $qType $hostname $dateTry]
-        	set tmpQuery "SELECT MAX(timestamp) FROM `$tableTry`"
-		set checkForTable "SHOW TABLES LIKE '`$tableTry`'"
-		set tResult [MysqlSelect $checkForTable flatlist]
-		if {[format {%s} $tResult] ne ""} {
-			if [catch {set qResult [MysqlSelect $tmpQuery flatlist]} em] {
-				LogMessage "Current Day Event Table Not Found:  $em"
-				set tmpQuery "SELECT MAX(timestamp) FROM event WHERE sid=$sid"
-				set qResult [MysqlSelect $tmpQuery flatlist]
-			}
-			LogMessage "$tmpQuery $qResult"
-                	set last [lindex $qResult 0]
-			LogMessage "Last: $last"
-		}
-	} else {
-		set tmpQuery "SELECT MAX(timestamp) FROM pads WHERE sid=$sid"
-		LogMessage "$tmpQuery"
-        	set last [lindex [MysqlSelect $tmpQuery flatlist] 0]
-	}
-	
     }
+
     # agentStatusList(sid) net_name hostname agent_type last status
     set agentStatusList($sid) [list $net_name $hostname $agent_type $last 0]
 

@@ -412,7 +412,7 @@ proc BroFlowFormat { srcIP srcPort dstIP dstPort } {
 }
 
 proc GenerateXscript { fileName clientSocketID winName TRANS_ID } {
-  global transInfoArray TCPFLOW LOCAL_LOG_DIR P0F P0F_PATH CANCEL_TRANS_FLAG
+  global transInfoArray TCPFLOW LOCAL_LOG_DIR P0F P0F_PATH CANCEL_TRANS_FLAG TMPDATADIR
   set NODATAFLAG 1
   # We don't have a really good way for make xscripts yet and are unable
   # to figure out the true src. So we assume the low port was the server
@@ -443,7 +443,7 @@ proc GenerateXscript { fileName clientSocketID winName TRANS_ID } {
     }
   }
   catch {SendSocket $clientSocketID [list XscriptMainMsg $winName " "]}
-  if  [catch {open "| $TCPFLOW -c -r $fileName"} tcpflowID] {
+  if  [catch {open "| $TCPFLOW -c -r $fileName -o $TMPDATADIR"} tcpflowID] {
     LogMessage "ERROR: tcpflow: $tcpflowID"
     catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "ERROR: tcpflow: $tcpflowID"]}
     catch {close $tcpflowID}

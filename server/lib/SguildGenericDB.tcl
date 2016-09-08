@@ -61,20 +61,26 @@ proc GetSensorID { sensorName type netName } {
 
 proc GetMaxCid { sid sensorName } {
 
-    # Check to see if there is a $sid event table for today then query it
-    set tDate [clock format [clock seconds] -format %Y%m%d]
-    
-    if [catch {FlatDBQuery "SELECT MAX(cid) FROM event_$sensorName\_$tDate"} cid] {
-      set cid [FlatDBQuery "SELECT MAX(cid) FROM event WHERE sid=$sid"]
-      LogMessage "SELECT MAX(cid) FROM event : $cid"
-      return $cid
-    }
+    global mergeTableListArray
 
-    LogMessage "SELECT MAX(cid) FROM event_$sensorName\_$tDate' : $cid"
-    return $cid
+    #make sure the merge tables exist before running queries
+    if { $mergeTableListArray(event) != "" } {
+
+      # Check to see if there is a $sid event table for today then query it
+      set tDate [clock format [clock seconds] -format %Y%m%d]
+    
+      if [catch {FlatDBQuery "SELECT MAX(cid) FROM event_$sensorName\_$tDate"} cid] {
+        set cid [FlatDBQuery "SELECT MAX(cid) FROM event WHERE sid=$sid"]
+        LogMessage "SELECT MAX(cid) FROM event : $cid"
+        return $cid
+      }  
+
+      LogMessage "SELECT MAX(cid) FROM event_$sensorName\_$tDate' : $cid"
+      return $cid
+
+  }
 
 }
-
 
 proc ExecDB { socketID query } {
   global MAIN_DB_SOCKETID

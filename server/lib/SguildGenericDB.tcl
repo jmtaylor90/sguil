@@ -69,7 +69,7 @@ proc GetMaxCid { sid sensorName } {
       # Check to see if there is a $sid event table for today then query it
       set tDate [clock format [clock seconds] -format %Y%m%d]
     
-      if [catch {FlatDBQuery "SELECT MAX(cid) FROM event_$sensorName\_$tDate"} cid] {
+      if { [catch {FlatDBQuery "SELECT MAX(cid) FROM event_$sensorName\_$tDate"} cid] || $cid == "" } {
         set cid [FlatDBQuery "SELECT MAX(cid) FROM event WHERE sid=$sid"]
         LogMessage "SELECT MAX(cid) FROM event : $cid"
         return $cid

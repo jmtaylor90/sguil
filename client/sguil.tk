@@ -702,7 +702,7 @@ proc InsertEventQueryResults { paneName results } {
 
     } else {
 
-	if { [catch { set statusColor [lindex $CAT($status) 2]}]} { set statusColor "#9633FF"}
+        if { [catch { set statusColor [lindex $CAT($status) 2]}]} { set statusColor "#9633FF"}
         if { [catch { set statusName [lindex $CAT($status) 1] }]} { set statusName UNK }
 
     }

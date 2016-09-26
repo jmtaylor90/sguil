@@ -427,8 +427,8 @@ if { [info exists DEBUG_OVERRIDE] && [info exists DEBUG_LEVEL] } {
     set DEBUG $DEBUG_LEVEL
 }
 
-# Set client connection wait time to 3 minutes if not specified in config
-if { ![info exists CLIENT_CONNECT_WAIT] } { set CLIENT_CONNECT_WAIT 180 }
+# Set client connection wait time to 1 minute if not specified in config
+if { ![info exists CLIENT_CONNECT_WAIT] } { set CLIENT_CONNECT_WAIT 60000 }
 
 # Source the libs
 set sourceLibs {
@@ -877,14 +877,12 @@ foreach net $netList {
     set sidNetNameMap($sid) $netName
 }
 
-proc OpenClientConnect { CLIENT_CONNECT_WAIT } {
+proc OpenClientConnect { } {
 
     global BIND_CLIENT_IP_ADDR
     global SERVERPORT
     global serverSocket
 
-    #after CLIENT_CONNECT_WAIT seconds open a port for clients to connect to
-    sleep $CLIENT_CONNECT_WAIT
     # Open a socket for clients to connect to
     if { [info exists BIND_CLIENT_IP_ADDR] && $BIND_CLIENT_IP_ADDR != "" } {
       set clientSocketCmd "socket -server ClientConnect -myaddr $BIND_CLIENT_IP_ADDR $SERVERPORT"
@@ -913,7 +911,7 @@ signal trap {QUIT TERM} CleanExit
 # Start the health check for sensoragents
 after 10000 SensorAgentsHealthCheck
 
-OpenClientConnect $CLIENT_CONNECT_WAIT
+after $CLIENT_CONNECT_WAIT OpenClientConnect
 
 # Infinite wait
 vwait FOREVER

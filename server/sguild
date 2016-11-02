@@ -363,9 +363,6 @@ if { ![info exists CONF_FILE] } {
 
 set i 0
 
-set BRO /opt/bro/bin/bro
-set BRO_SCRIPT /opt/bro/share/bro/sguild_bro/TCPUDPFlow.bro
-
 if { [info exists CONF_FILE] } {
   # Parse the config file. Currently the only option is to 
   # create a variable using 'set varName value' 
@@ -415,6 +412,12 @@ if { [info exists USER] } {
     }
 
 }
+
+# Set bro plugin information if it isn't specified in config
+if { ![info exists BRO] } { set BRO /opt/bro/bin/bro }
+
+# Set bro_script path if it isn't specified in config
+if { ![info exists BRO_SCRIPT] } { set BRO_SCRIPT /opt/bro/share/bro/sguild_bro/TCPUDPFlow.bro }
 
 # Set last column agent status query data to off if not specified in config
 if { ![info exists LAST_DATA_TIME] } { set LAST_DATA_TIME 0 }

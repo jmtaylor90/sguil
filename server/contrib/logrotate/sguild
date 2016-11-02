@@ -1,0 +1,9 @@
+#rotate user and agent logs daily and compress
+#keep 14 days of logs
+
+/var/log/sguild/*.log {
+    compress
+    maxage 14
+    daily
+    copytruncate
+}

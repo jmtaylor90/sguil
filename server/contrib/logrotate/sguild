@@ -3,7 +3,6 @@
 
 /var/log/sguild/*.log {
     compress
-    rotate 14
     maxage 14
     daily
     copytruncate

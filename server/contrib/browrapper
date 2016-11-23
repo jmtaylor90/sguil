@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#this wrapper script is required when running sguil as a non-root user
+#bro does not currently have a runtime option to specify the log output
+#directory
+
+#to use this script copy it to the desired location and make it executable
+#set the BRO variable in sguild.conf to this file
+
+#set the working directory that bro can write to
+tmpdir="/tmp"
+
+#exit if bro is not installed
+if [[ -z $(which bro 2>/dev/null) ]]; then
+  exit 1
+fi
+
+cd ${tmpdir}
+
+$(which bro) $@

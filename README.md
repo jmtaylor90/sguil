@@ -42,14 +42,14 @@ If you want to understand the Architecture in depth from a development point of 
 1. Clone this source to target server.
 2. Install MySQL/Percona/MariaDB.
 3. Create a database for sguild as well as a user and password; for example:
-```
-create database sguild;
-create user 'sguildb'@'localhost' identified by 'sguildb';
-grant all on sguildb.* to `sguildb`@'localhost';
-create user 'sguildb'@'%' identified by 'sguildb';
-grant all on sguildb.* to `sguildb`@'%';
-flush privileges;
-```
+    ```
+    create database sguild;
+    create user 'sguildb'@'localhost' identified by 'sguildb';
+    grant all on sguildb.* to `sguildb`@'localhost';
+    create user 'sguildb'@'%' identified by 'sguildb';
+    grant all on sguildb.* to `sguildb`@'%';
+    flush privileges;
+    ```
 4. Initialize the database: `mysql -u sguildb -p sguildb < sguil/server/sql_scripts/create_sguildb.sql`
 5. Edit `sguild.conf`; set `DBNAME`, `DBPASS`, `DBHOST`, `DBPORT`, and `DBUSER`.
 6. Enable EPEL repository; `yum localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm`

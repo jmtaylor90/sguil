@@ -443,7 +443,7 @@ proc GenerateXscript { fileName clientSocketID winName TRANS_ID } {
     }
   }
   catch {SendSocket $clientSocketID [list XscriptMainMsg $winName " "]}
-  if  [catch {open "| $TCPFLOW -c -r $fileName -o $TMPDATADIR"} tcpflowID] {
+  if  [catch {open "| $TCPFLOW -c -r $fileName"} tcpflowID] {
     LogMessage "ERROR: tcpflow: $tcpflowID"
     catch {SendSocket $clientSocketID [list XscriptDebugMsg $winName "ERROR: tcpflow: $tcpflowID"]}
     catch {close $tcpflowID}

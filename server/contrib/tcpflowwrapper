@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#this wrapper script is required when running sguil as a non-root user
+#sguil does not render src/dst in transcripts from tcpflow output properly
+#if an output directory is specified at tcpflow runtime (-o).
+
+#to use this script copy it to the desired location and make it executable
+#set the TCPFLOW variable in sguild.conf to this file
+
+#set the working directory that tcpflow can write to
+tmpdir="/tmp"
+
+#exit if tcpflow is not installed
+if [[ -z $(which tcpflow 2>/dev/null) ]]; then
+  exit 1
+fi
+
+cd ${tmpdir}
+
+$(which tcpflow) $@

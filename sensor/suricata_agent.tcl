@@ -1,6 +1,4 @@
-#!/bin/sh
-# Run tcl from users PATH \
-exec tclsh "$0" "$@"
+#!/usr/bin/env tclsh
 
 # Copyright (C) 2002-2017 Robert (Bamm) Visscher <bamm@sguil.net>
 #

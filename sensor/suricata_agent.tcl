@@ -742,8 +742,8 @@ if { [info exists CONF_FILE] } {
 }
 #
 ## Command line overrides the conf file.
-#if {[info exists DAEMON_CONF_OVERRIDE] && $DAEMON_CONF_OVERRIDE} { set DAEMON 1}
-#if {[info exists DAEMON] && $DAEMON} {Daemonize}
+if {[info exists DAEMON_CONF_OVERRIDE] && $DAEMON_CONF_OVERRIDE} { set DAEMON 1}
+if {[info exists DAEMON] && $DAEMON} {Daemonize}
 
 # OpenSSL is required
 # Need path?

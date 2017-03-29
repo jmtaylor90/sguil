@@ -73,6 +73,7 @@ proc DecodePacket { linktype p } {
     switch -exact -- $linktype {
 
         1  	{ etherNet $P }
+	12	{ DecodeIPv4 $P }
         default { puts "Unknown linktype -> $linktype" }
 
     }
@@ -186,7 +187,7 @@ proc DecodeIPv4 { P } {
         1    	{ DecodeICMP $P }
         6    	{ DecodeTCP $P }
         17	{ DecodeUDP $P }
-        default { puts "Unknown IP protocol type" }
+        default { puts "Unknown IP protocol type $P" }
 
     }
 
@@ -242,7 +243,12 @@ proc ParseEveLine { line } {
     } else { 
         set flow_id 0
     }
-    incr CID
+
+    if { [catch {incr CID}] || $CID == "" || $CID == "{}" } {
+      set CID 0
+      incr CID
+    }
+
     #
     # 2017-03-05T00:21:01.145558+0000
     #
@@ -257,7 +263,6 @@ proc ParseEveLine { line } {
 
         array set packet_info [dict get $data packet_info]
         DecodePacket $packet_info(linktype) [ base64::decode [dict get $data packet]]
-
     }
 
     set src_ip [dict get $data src_ip]
@@ -267,8 +272,8 @@ proc ParseEveLine { line } {
     if { ![info exists packet(ipv4)] || !$packet(ipv4) } {
 
         # Generate our own decimal IP
-        set packet(ip_sip) [::ip::toInteger $src_ip]
-        set packet(ip_dip) [::ip::toInteger $dst_ip]
+        set packet(ip_sip) [::ip::maskToInt $src_ip]
+        set packet(ip_dip) [::ip::maskToInt $dst_ip]
 
         # Set the IP proto
         set ip_proto_name [dict get $data proto]
@@ -276,7 +281,7 @@ proc ParseEveLine { line } {
 
             TCP	{ set packet(ip_proto) 6 }
             UDP { set packet(ip_proto) 17 }
-            ICMP { set packet(ip_proto) 0 }
+            ICMP { set packet(ip_proto) 1 }
             default { set packet(ip_proto) {} }
 
         }
@@ -306,16 +311,17 @@ proc ParseEveLine { line } {
 
     }
 
-    # Add src and dst ports
-    if { ![info exists packet(src_port)] } { 
+    # Add src and dest ports
+
+    if { ![info exists packet(src_port)] } {
         if { [dict exists $data src_port] } { lappend msg [dict get $data src_port] } else { lappend msg {} }
     } else {
         lappend msg $packet(src_port)
     }
-    if { ![info exists packet(dst_port)] } { 
-        if { [dict exists $data dst_port] } { lappend msg [dict get $data dst_port] } else { lappend msg {} }
+    if { ![info exists packet(dest_port)] } {
+        if { [dict exists $data dest_port] } { lappend msg [dict get $data dest_port] } else { lappend msg {} }
     } else {
-        lappend msg $packet(dst_port)
+        lappend msg $packet(dest_port)
     }
 
     # Add TCP indexes

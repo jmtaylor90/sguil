@@ -94,6 +94,7 @@ proc etherNet { P } {
     switch -exact --  $packet(e_type) {
 
         0800	{ DecodeIPv4 $P }
+        8100    { DecodeVLAN $P }
         default	{ puts "Unknown ether type -> $packet(e_type)" }
 
     }
@@ -193,6 +194,37 @@ proc DecodeIPv4 { P } {
 
 }
 
+proc DecodeVLAN { P } {
+
+    global packet
+
+    set packet(ipv4) 1
+    set packet(ip_ver) [string index $P 8]
+    set packet(ip_hlen) [expr [PacketHex2Dec $P 9 9] * 4]
+    set packet(ip_tos) [string range $P 10 11]
+    set packet(ip_len) [PacketHex2Dec $P 12 15]
+    set packet(ip_id) [PacketHex2Dec $P 16 19]
+    set packet(ip_flags) [PacketHex2Dec $P 20 20]
+    set packet(ip_off) [PacketHex2Dec $P 21 23]
+    set packet(ip_ttl) [PacketHex2Dec $P 24 25]
+    set packet(ip_proto) [PacketHex2Dec $P 26 27]
+    set packet(ip_csum) [PacketHex2Dec $P 28 31]
+    set packet(ip_sip) [PacketHex2Dec $P 32 39]
+    set packet(ip_dip) [PacketHex2Dec $P 40 47]
+
+    set P [string range $P [expr $packet(ip_hlen) * 2] end]
+
+    switch -exact --  $packet(ip_proto) {
+
+        1       { DecodeICMP $P }
+        6       { DecodeTCP $P }
+        17      { DecodeUDP $P }
+        default { puts "Unknown IP protocol type $P" }
+
+    }
+
+}
+
 proc ReadNextEveLine {} {
 
     global EVE_FILE EVE_MD5 ROW EVE_ID CONFIRM_WAIT
@@ -248,7 +280,7 @@ proc ParseEveLine { line } {
       set CID 0
       incr CID
     }
-
+  
     #
     # 2017-03-05T00:21:01.145558+0000
     #
